@@ -1,0 +1,47 @@
+/** 
+ * @file ValkyrieAdapter.h
+ * @author Mnsx_x <xx1527030652@gmail.com>
+ * @date 2026/4/20
+ * @description 
+ */
+#ifndef HEIMDALLMONITOR_VALKYRIEADAPTER_H
+#define HEIMDALLMONITOR_VALKYRIEADAPTER_H
+#include <qtmetamacros.h>
+#include <QTcpSocket>
+
+namespace mnsx {
+    namespace valkyrie {
+        class ValkyriePayload;
+    }
+}
+
+class ValkyrieAdapter : public QObject {
+
+    Q_OBJECT
+
+public:
+    explicit ValkyrieAdapter(QObject *parent = nullptr);
+    ~ValkyrieAdapter() override;
+
+    void connectToEngine(const QString& host, quint16 port);
+    void disconnectFromEngine();
+
+    // 发送数据到 WSL 后端 (例如发送控制指令)
+    void sendPayload(const QString& type, const QVariantMap& data);
+
+signals:
+    // --- UI 通知信号 ---
+    void connectionChanged(bool connected);
+    void defectImageReceived(int nodeId, const QByteArray& data);
+
+private:
+    // 处理底层 Socket 数据到达
+    void onReadyRead();
+
+    // socket
+    QTcpSocket* socket_;
+
+    quint32 expectedSize_; // 当前数据包长度
+};
+
+#endif //HEIMDALLMONITOR_VALKYRIEADAPTER_H
