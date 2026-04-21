@@ -11,6 +11,8 @@
 #include <QListWidget>
 #include <QStackedWidget>
 
+#include "../core/adapter/ValkyrieAdapter.h"
+
 QT_BEGIN_NAMESPACE
 
 namespace Ui {

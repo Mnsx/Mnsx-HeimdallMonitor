@@ -20,8 +20,12 @@ class ValkyrieAdapter : public QObject {
     Q_OBJECT
 
 public:
-    explicit ValkyrieAdapter(QObject *parent = nullptr);
     ~ValkyrieAdapter() override;
+
+    static ValkyrieAdapter& getIntance() {
+        static ValkyrieAdapter valkyrieAdapter;
+        return valkyrieAdapter;
+    }
 
     void connectToEngine(const QString& host, quint16 port);
     void disconnectFromEngine();
@@ -29,12 +33,16 @@ public:
     // 发送数据到 WSL 后端 (例如发送控制指令)
     void sendPayload(const QString& type, const QVariantMap& data);
 
+    QTcpSocket* getSocket() { return socket_; }
+
 signals:
     // --- UI 通知信号 ---
     void connectionChanged(bool connected);
     void defectImageReceived(int nodeId, const QByteArray& data);
-
+    void logReceived(const QVector<QString>);
+    void clustDataReceived(const QVector<QVariantMap>);
 private:
+    explicit ValkyrieAdapter(QObject *parent = nullptr);
     // 处理底层 Socket 数据到达
     void onReadyRead();
 

@@ -8,8 +8,11 @@
 
 #include <QVBoxLayout>
 #include <QDateTime>
+#include <thread>
+#include <QTimer>
 
-SystemLogPage::SystemLogPage(QWidget *parent) : QWidget(parent), ui(new Ui::SystemLogPage) {
+SystemLogPage::SystemLogPage(QWidget *parent) : QWidget(parent),
+    ui(new Ui::SystemLogPage) {
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(5, 5, 5, 5);
 
@@ -18,7 +21,19 @@ SystemLogPage::SystemLogPage(QWidget *parent) : QWidget(parent), ui(new Ui::Syst
 
     layout->addWidget(logBrowser_);
 
-    appendLog("INFO", "[删除] Heimdall Monitor System Initialized.");
+    // 开启新线程从服务端获取日志
+    pollTimer_ = new QTimer(this);
+    connect(pollTimer_, &QTimer::timeout, this, &SystemLogPage::onPollTimerTimeout);
+    connect(&ValkyrieAdapter::getIntance(), &ValkyrieAdapter::logReceived, this, [this](const QVector<QString> logs) {
+        logBrowser_->clear();
+        for (auto log : logs) {
+            logBrowser_->append(log);
+        }
+        logBrowser_->moveCursor(QTextCursor::End);
+    });
+    pollTimer_->start(2000);
+
+    // appendLog("INFO", "[删除] Heimdall Monitor System Initialized.");
     ui->setupUi(this);
 }
 
@@ -40,4 +55,11 @@ void SystemLogPage::appendLog(const QString& level, const QString& message) {
                               .arg(timestamp).arg(color).arg(level).arg(message);
 
     logBrowser_->append(htmlLog);
+}
+
+void SystemLogPage::onPollTimerTimeout() {
+    QVariantMap req;
+    req["method"] = "SystemLog.getSystemLog";
+
+    ValkyrieAdapter::getIntance().sendPayload("METHOD", req);
 }

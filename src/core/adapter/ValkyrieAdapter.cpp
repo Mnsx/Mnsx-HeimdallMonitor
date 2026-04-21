@@ -4,6 +4,7 @@
  * @date 2026/4/20
  */
 #include "ValkyrieAdapter.h"
+#include <QJsonArray>
 #include <QJsonObject>
 
 ValkyrieAdapter::ValkyrieAdapter(QObject *parent) : QObject(parent), socket_(new QTcpSocket(this)),
@@ -62,20 +63,39 @@ void ValkyrieAdapter::onReadyRead() {
             continue;
         }
 
-        QJsonObject obj = doc.object();
-        QString msgType = obj["type"].toString();
+        QJsonArray json_array = doc.array();
+        if (json_array.size() >= 0) {
+            QJsonObject type_obj = json_array[0].toObject();
+            QString msg_type = type_obj.value("type").toString();
 
-        if (msgType == "LOG") {
-            // 日志内容
-            // emit logReceived(obj["level"].toString(), obj["content"].toString());
-        } else if (msgType == "DATA") {
-            // 数据
+            if (msg_type == "LOG") {
+                // 解析日志数据
+                QVector<QString> contents;
+                for (int i = 1; i < json_array.size(); i++) {
+
+                    QJsonObject content_obj = json_array[i].toObject();
+                    QString content = content_obj.value("content").toString();
+                    contents.append(content);
+                }
+                // 日志内容
+                emit logReceived(contents);
+            } else if (msg_type == "DATA") {
+                QVector<QVariantMap> datas;
+                for (int i = 1; i < json_array.size(); i++) {
+
+                    QJsonObject content_obj = json_array[i].toObject();
+                    QVariantMap data = content_obj.toVariantMap();
+                    datas.append(data);
+                }
+                // 数据
+                emit clustDataReceived(datas);
+            }
         }
     }
 }
 
 void ValkyrieAdapter::sendPayload(const QString& type, const QVariantMap& data) {
-    if (!socket_ || socket_->state() != QAbstractSocket::ConnectedState) {
+    if (!socket_) {
         return;
     }
 

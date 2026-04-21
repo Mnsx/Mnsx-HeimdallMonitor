@@ -10,6 +10,8 @@
 #include <QWidget>
 #include <QTextBrowser>
 
+#include "../../core/adapter/ValkyrieAdapter.h"
+
 
 QT_BEGIN_NAMESPACE
 
@@ -29,9 +31,13 @@ public:
 
     void appendLog(const QString& level, const QString& message);
 
+    void onPollTimerTimeout();
+
 private:
     Ui::SystemLogPage *ui;
     QTextBrowser* logBrowser_;
+
+    QTimer* pollTimer_;
 };
 
 

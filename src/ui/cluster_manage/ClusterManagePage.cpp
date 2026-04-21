@@ -4,6 +4,7 @@
  * @date 2026/4/20
  */
 #include "ClusterManagePage.h"
+#include "../../core/adapter/ValkyrieAdapter.h"
 #include "ui_ClusterManagePage.h"
 
 #include <QGroupBox>
@@ -17,14 +18,27 @@ ClusterManagePage::ClusterManagePage(QWidget *parent) : QWidget(parent), ui(new 
 
     setupServerControlUI(mainLayout);
     setupClientTableUI(mainLayout);
+
+
+    // 启动时获取数据库中存储的已经连接的集群
+    connect(&ValkyrieAdapter::getIntance(), &ValkyrieAdapter::clustDataReceived, this, [this](const QVector<QVariantMap> datas) {
+        int row_count = clientTable_->rowCount();
+        for (int i = 0; i < row_count; ++i) {
+            clientTable_->removeRow(i);
+        }
+        for (auto data : datas) {
+            addOrUpdateClient(data.value("mac_address").toString(), data.value("ip_address").toString(),
+                data.value("node_name").toString(), data.value("status").toString(), data.value("last_heartbeat_time").toString());
+        }
+    });
 }
 
 void ClusterManagePage::setupClientTableUI(QVBoxLayout* mainLayout) {
     QGroupBox* clientGroup = new QGroupBox("Valkyrie 视觉节点管控", this);
     QVBoxLayout* groupLayout = new QVBoxLayout(clientGroup);
 
-    clientTable_ = new QTableWidget(0, 4, this);
-    clientTable_->setHorizontalHeaderLabels({"节点 ID", "IP 地址", "端口号", "当前状态", "最后心跳时间"});
+    clientTable_ = new QTableWidget(0, 5, this);
+    clientTable_->setHorizontalHeaderLabels({"节点MAC地址", "节点IP地址", "节点名称", "当前状态", "最后心跳时间"});
 
     clientTable_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     clientTable_->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -35,9 +49,6 @@ void ClusterManagePage::setupClientTableUI(QVBoxLayout* mainLayout) {
 
     groupLayout->addWidget(clientTable_);
     mainLayout->addWidget(clientGroup);
-
-    addOrUpdateClient(1001, "192.168.1.10", "🟢 检测中", "2026-04-20 10:45:12");
-    addOrUpdateClient(1002, "192.168.1.11", "🔴 离线", "2026-04-20 10:40:05");
 
     clientTable_->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(clientTable_, &QTableWidget::customContextMenuRequested,
@@ -97,15 +108,16 @@ void ClusterManagePage::updateServerStatus(bool isRunning) {
     }
 }
 
-void ClusterManagePage::addOrUpdateClient(int clientId, const QString& ip, const QString& status, const QString& lastHeartbeat) {
+void ClusterManagePage::addOrUpdateClient(const QString& mac_addr, const QString& ip, const QString& node_name, const QString& status, const QString& lastHeartbeat) {
     int row = clientTable_->rowCount();
     clientTable_->insertRow(row);
 
     // 插入数据
-    clientTable_->setItem(row, 0, new QTableWidgetItem(QString::number(clientId)));
+    clientTable_->setItem(row, 0, new QTableWidgetItem(mac_addr));
     clientTable_->setItem(row, 1, new QTableWidgetItem(ip));
-    clientTable_->setItem(row, 2, new QTableWidgetItem(status));
-    clientTable_->setItem(row, 3, new QTableWidgetItem(lastHeartbeat));
+    clientTable_->setItem(row, 2, new QTableWidgetItem(node_name));
+    clientTable_->setItem(row, 3, new QTableWidgetItem(status));
+    clientTable_->setItem(row, 4, new QTableWidgetItem(lastHeartbeat));
 
     // 文字居中
     for(int i=0; i<4; ++i) {
@@ -122,7 +134,7 @@ void ClusterManagePage::showTableContextMenu(const QPoint &pos) {
 
     int row = item->row();
     QString nodeId = clientTable_->item(row, 0)->text();
-    QString status = clientTable_->item(row, 2)->text();
+    QString status = clientTable_->item(row, 3)->text();
 
     // 创建右键菜单
     QMenu menu(this);
@@ -139,8 +151,15 @@ void ClusterManagePage::showTableContextMenu(const QPoint &pos) {
     QAction* selectedAction = menu.exec(clientTable_->viewport()->mapToGlobal(pos));
 
     if (selectedAction == removeAction) {
-        // TODO 掐断 TCP 连接
-        // 目前先仅仅把 UI 上的这一行删掉
-        clientTable_->removeRow(row);
+        QVariantMap req;
+        req["method"] = "ClusterManage.removeCluster";
+        req["nodeMac"] = nodeId;
+        ValkyrieAdapter::getIntance().sendPayload("METHOD", req);
     }
+}
+
+void ClusterManagePage::refreshTable() {
+    QVariantMap req;
+    req["method"] = "ClusterManage.getAllCluster";
+    ValkyrieAdapter::getIntance().sendPayload("METHOD", req);
 }

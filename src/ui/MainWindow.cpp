@@ -8,6 +8,7 @@
 
 #include <QHBoxLayout>
 
+#include "../core/adapter/ValkyrieAdapter.h"
 #include "cluster_manage/ClusterManagePage.h"
 #include "defect_approval/DefectApprovalPage.h"
 #include "system_log/SystemLogPage.h"
@@ -21,6 +22,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
                         "QListWidget::item { padding: 15px; } "
                         "QListWidget::item:selected { background-color: #007ACC; } "
                         "QLabel, QGroupBox { color: white; }");
+
+    // 连接服务端
+    ValkyrieAdapter::getIntance().connectToEngine("127.0.0.1", 8888);
+    while (!ValkyrieAdapter::getIntance().getSocket()->isOpen()) {}
 
     setupUi();
 }
@@ -59,5 +64,10 @@ void MainWindow::setupUi() {
     this->setCentralWidget(centralWidget);
 
     connect(navList_, &QListWidget::currentRowChanged, stackedWidget_, &QStackedWidget::setCurrentIndex);
+    connect(navList_, &QListWidget::currentRowChanged, this, [cluster_manage_page](int curIndex) {
+        if (curIndex == 0) {
+            static_cast<ClusterManagePage*>(cluster_manage_page)->refreshTable();
+        }
+    });
     navList_->setCurrentRow(0);
 }

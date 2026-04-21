@@ -32,10 +32,12 @@ public:
     ~ClusterManagePage() override;
 
     void updateServerStatus(bool isRunning);
-    void addOrUpdateClient(int clientId, const QString& ip, const QString& status, const QString& lastHeartbeat);
+    void addOrUpdateClient(const QString& mac_addr, const QString& ip, const QString& node_name, const QString& status, const QString& lastHeartbeat);
     void removeClient(int clientId);
 
     void showTableContextMenu(const QPoint& pos);
+
+    void refreshTable();
 
 signals:
     void requestStartServer(int port);
