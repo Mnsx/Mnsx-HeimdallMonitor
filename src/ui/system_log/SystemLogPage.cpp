@@ -42,7 +42,6 @@ SystemLogPage::~SystemLogPage() {
 }
 
 void SystemLogPage::appendLog(const QString& level, const QString& message) {
-    // TODO 使用Argus传送过来的日志信息
     QString timestamp = QDateTime::currentDateTime().toString("[yyyy-MM-dd HH:mm:ss.zzz]");
 
     QString color = "#00FF00";

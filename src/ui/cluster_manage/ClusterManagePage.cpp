@@ -19,7 +19,6 @@ ClusterManagePage::ClusterManagePage(QWidget *parent) : QWidget(parent), ui(new 
     setupServerControlUI(mainLayout);
     setupClientTableUI(mainLayout);
 
-
     // 启动时获取数据库中存储的已经连接的集群
     connect(&ValkyrieAdapter::getIntance(), &ValkyrieAdapter::clustDataReceived, this, [this](const QVector<QVariantMap> datas) {
         int row_count = clientTable_->rowCount();
@@ -83,10 +82,12 @@ void ClusterManagePage::setupServerControlUI(QVBoxLayout* mainLayout) {
     mainLayout->addWidget(serverGroup);
 
     connect(startBtn_, &QPushButton::clicked, [this]() {
-        emit requestStartServer(portSpinBox_->value());
+        updateServerStatus(true);
+        // emit requestStartServer(portSpinBox_->value());
     });
     connect(stopBtn_, &QPushButton::clicked, [this]() {
-        emit requestStopServer();
+        // emit requestStopServer();
+        updateServerStatus(false);
     });
 }
 
@@ -112,11 +113,13 @@ void ClusterManagePage::addOrUpdateClient(const QString& mac_addr, const QString
     int row = clientTable_->rowCount();
     clientTable_->insertRow(row);
 
+    QString status_str = status == "0" ? "启动" : "停止";
+
     // 插入数据
     clientTable_->setItem(row, 0, new QTableWidgetItem(mac_addr));
     clientTable_->setItem(row, 1, new QTableWidgetItem(ip));
     clientTable_->setItem(row, 2, new QTableWidgetItem(node_name));
-    clientTable_->setItem(row, 3, new QTableWidgetItem(status));
+    clientTable_->setItem(row, 3, new QTableWidgetItem(status_str));
     clientTable_->setItem(row, 4, new QTableWidgetItem(lastHeartbeat));
 
     // 文字居中
