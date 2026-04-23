@@ -89,6 +89,17 @@ void ValkyrieAdapter::onReadyRead() {
                 }
                 // 数据
                 emit clustDataReceived(datas);
+            } else if (msg_type == "SIGNAL") {
+                // 发送数据请求
+                QJsonObject content_obj = json_array[1].toObject();
+                QVariantMap data = content_obj.toVariantMap();
+
+                emit defectDataReceived(data);
+            } else if (msg_type == "IMAGE") {
+                QJsonObject content_obj = json_array[1].toObject();
+                QVariantMap data = content_obj.toVariantMap();
+
+                emit defectImageReceived(data);
             }
         }
     }

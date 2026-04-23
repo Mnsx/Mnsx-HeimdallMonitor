@@ -38,11 +38,13 @@ public:
 signals:
     // --- UI 通知信号 ---
     void connectionChanged(bool connected);
-    void defectImageReceived(int nodeId, const QByteArray& data);
+    void defectImageReceived(const QVariantMap& map);
     void logReceived(const QVector<QString>);
     void clustDataReceived(const QVector<QVariantMap>);
+    void defectDataReceived(const QVariantMap& map);
 private:
     explicit ValkyrieAdapter(QObject *parent = nullptr);
+
     // 处理底层 Socket 数据到达
     void onReadyRead();
 

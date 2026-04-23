@@ -9,6 +9,12 @@
 #include <QGroupBox>
 #include <QVBoxLayout>
 #include <QScroller>
+#include <QImageReader>
+#include <QDebug>
+#include <QPushButton>
+#include <QPainter>
+
+#include "../../core/adapter/ValkyrieAdapter.h"
 
 
 DefectApprovalPage::DefectApprovalPage(QWidget *parent) : QWidget(parent) {
@@ -73,13 +79,128 @@ void DefectApprovalPage::setupUi() {
     displayLayout->addWidget(mainImageDisplay_);
     mainLayout->addWidget(displayGroup);
 
+    QHBoxLayout* controlLayout = new QHBoxLayout();
+    controlLayout->addStretch();
+    QPushButton* toggleDefectBtn_ = new QPushButton("标记缺陷", this);
+    toggleDefectBtn_->setCursor(Qt::PointingHandCursor);
+    toggleDefectBtn_->setStyleSheet(
+        "QPushButton {"
+        "   background-color: #2D2D2D;"
+        "   color: #00FFCC;"           // 亮青色字体，极具科技感
+        "   border: 1px solid #444444;"
+        "   border-radius: 4px;"
+        "   padding: 5px 15px;"
+        "   font-size: 13px;"
+        "   font-weight: bold;"
+        "}"
+        "QPushButton:hover { background-color: #3D3D3D; border-color: #00FFCC; }"
+        "QPushButton:pressed { background-color: #1E1E1E; color: #00AA88; }"
+    );
+    controlLayout->addWidget(toggleDefectBtn_);
+    displayLayout->addLayout(controlLayout);
+    mainLayout->addWidget(displayGroup);
     listGroup->setFixedHeight(250);
 
-    // 【测试假数据】：放入几个空的缩略图方块，让你能测试鼠标滚轮滑动
-    for (int i = 1; i <= 15; ++i) {
-        QListWidgetItem* item = new QListWidgetItem(QString("Defect_ID: %1\n(No Image)").arg(i));
-        item->setSizeHint(QSize(140, 100)); // 强行撑开方块的大小
-        item->setTextAlignment(Qt::AlignCenter);
+    // 绑定缺陷显示的按钮
+    connect(toggleDefectBtn_, &QPushButton::clicked, this, [this]() {
+        if (current_raw_pixmap_.isNull() || current_rects_str_.isEmpty()) {
+            qDebug() << "⚠️ 没有可标记的图像或坐标数据！";
+            return;
+        }
+
+        QPixmap canvas = current_raw_pixmap_;
+
+        QPainter painter(&canvas);
+
+        painter.setPen(QPen(Qt::red, 3, Qt::SolidLine));
+
+        // painter.setBrush(QColor(255, 0, 0, 40));
+
+        QStringList coords = current_rects_str_.split(",");
+
+        for (int i = 0; i <= coords.size() - 4; i += 4) {
+            int x = coords[i].toInt();
+            int y = coords[i+1].toInt();
+            int w = coords[i+2].toInt();
+            int h = coords[i+3].toInt();
+            painter.drawRect(x, y, w, h);
+        }
+
+        painter.end();
+
+        QPixmap final_pixmap = canvas.scaled(
+            mainImageDisplay_->size(),
+            Qt::KeepAspectRatio,
+            Qt::SmoothTransformation
+        );
+
+        mainImageDisplay_->setPixmap(final_pixmap);
+        qDebug() << "🎯 缺陷目标已锁定并高亮显示！";
+    });
+
+    connect(&ValkyrieAdapter::getIntance(), &ValkyrieAdapter::defectDataReceived, this, [this](const QVariantMap& map) {
+        QByteArray image_bytes = QByteArray::fromBase64(map.value("img").toString().toUtf8());
+
+         QPixmap pixmap;
+        if (pixmap.loadFromData(image_bytes, "JPG")) {
+            QListWidgetItem *item = new QListWidgetItem();
+            item->setIcon(QIcon(pixmap));
+            item->setTextAlignment(Qt::AlignCenter);
+            QString tooltip_html = QString(
+                        "<div style='white-space: pre-wrap;'>"
+                        "<b>MAC地址：</b> %1<br>"
+                        "<b>抓拍时间：</b> %2<br>"
+                        "<b>缺陷类型：</b> %3<br>"
+                        "<b>缺陷数量：</b> %4<br>"
+                        "<b>存储路径：</b> %6"
+                        "</div>"
+                    ).arg(map.value("mac").toString())
+                    .arg(map.value("time").toString())
+                    .arg(map.value("rtype").toString())
+                    .arg(map.value("count").toString())
+                    .arg(map.value("path").toString());
+
+            item->setToolTip(tooltip_html);
+            // 存储重要数据
+            item->setData(Qt::UserRole, map.value("path").toString());
+            item->setData(Qt::UserRole + 1, map.value("mac").toString());
+            item->setData(Qt::UserRole + 2, map.value("rects").toString());
+
+            item->setText(QString("MAC: %1").arg(map.value("mac").toString()));
+            thumbnailList_->setIconSize(QSize(160, 90));
+            // 绑定点击事件
+            connect(thumbnailList_, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *item) {
+                QString original_path = item->data(Qt::UserRole).toString();
+                QString pure_mac = item->data(Qt::UserRole + 1).toString();
+                QString rects_str = item->data(Qt::UserRole + 2).toString();
+                // 存储缺陷信息
+                current_rects_str_ = item->data(Qt::UserRole + 2).toString();
+                QVariantMap req;
+                req["method"] = "DetectRecord.getRecordFromPath";
+                req["path"] = original_path;
+                ValkyrieAdapter::getIntance().sendPayload("METHOD", req);
+            });
+            // 绑定
+            connect(&ValkyrieAdapter::getIntance(), &ValkyrieAdapter::defectImageReceived, this, [this](const QVariantMap& map) {
+                QByteArray image_bytes = QByteArray::fromBase64(map.value("img").toString().toUtf8());
+
+                QPixmap pixmap;
+                if (pixmap.loadFromData(image_bytes)) {
+                current_raw_pixmap_ = pixmap;
+
+                QPixmap scaled_pixmap = pixmap.scaled(
+                    mainImageDisplay_->size(),
+                    Qt::KeepAspectRatio,
+                    Qt::SmoothTransformation
+                );
+
+                mainImageDisplay_->setPixmap(scaled_pixmap);
+                mainImageDisplay_->setAlignment(Qt::AlignCenter);
+            } else {
+            }
+        });
         thumbnailList_->addItem(item);
-    }
+     } else {
+     }
+    });
 }

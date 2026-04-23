@@ -34,6 +34,9 @@ private:
 
     QListWidget* thumbnailList_;
     QLabel* mainImageDisplay_;
+
+    QString current_rects_str_;    // 暂存当前选中的缺陷坐标
+    QPixmap current_raw_pixmap_;   // 暂存当前纯净的原图 (未缩放)
 };
 
 
