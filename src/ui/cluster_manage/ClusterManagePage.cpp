@@ -113,7 +113,7 @@ void ClusterManagePage::addOrUpdateClient(const QString& mac_addr, const QString
     int row = clientTable_->rowCount();
     clientTable_->insertRow(row);
 
-    QString status_str = status == "0" ? "启动" : "停止";
+    QString status_str = status == "1" ? "在线" : "离线";
 
     // 插入数据
     clientTable_->setItem(row, 0, new QTableWidgetItem(mac_addr));

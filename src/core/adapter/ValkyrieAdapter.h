@@ -42,6 +42,10 @@ signals:
     void logReceived(const QVector<QString>);
     void clustDataReceived(const QVector<QVariantMap>);
     void defectDataReceived(const QVariantMap& map);
+    void realtimeYieldDataReceived(double res);
+    void typeCountAdd(int type);
+    void falseRateReceived(const QVector<QMap<QString, QVariant>> & maps);
+
 private:
     explicit ValkyrieAdapter(QObject *parent = nullptr);
 

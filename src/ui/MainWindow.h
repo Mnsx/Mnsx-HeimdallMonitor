@@ -10,6 +10,7 @@
 #include <QMainWindow>
 #include <QListWidget>
 #include <QStackedWidget>
+#include <QTreeWidget> // 引入树形控件
 
 #include "../core/adapter/ValkyrieAdapter.h"
 
@@ -32,7 +33,8 @@ public:
 private:
     void setupUi();
 
-    QListWidget* navList_;
+    // QListWidget* navList_;
+    QTreeWidget* navTree_;
     QStackedWidget* stackedWidget_;
 
     Ui::MainWindow *ui;

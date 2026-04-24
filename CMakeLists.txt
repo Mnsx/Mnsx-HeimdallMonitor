@@ -13,6 +13,7 @@ find_package(Qt6 COMPONENTS
         Gui
         Widgets
         Network
+        Charts
         REQUIRED)
 
 add_executable(HeimdallMonitor main.cpp
@@ -21,11 +22,16 @@ add_executable(HeimdallMonitor main.cpp
         src/ui/cluster_manage/ClusterManagePage.cpp
         src/ui/defect_approval/DefectApprovalPage.cpp
         src/core/adapter/ValkyrieAdapter.cpp
+        src/ui/data_report/item/realtime_yield/RealtimeYield.cpp
+        src/ui/data_report/item/parts_per_million/PartsPerMillion.cpp
+        src/ui/data_report/item/defect_distribution/DefectDistribution.cpp
+        src/ui/data_report/item/false_positive_rate/FalsePositiveRate.cpp
+        src/ui/data_report/DataReport.cpp
 )
 
 target_link_libraries(HeimdallMonitor
         PRIVATE
-        Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network
+        Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Charts
 )
 
 if (WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)

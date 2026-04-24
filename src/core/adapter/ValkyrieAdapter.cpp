@@ -93,13 +93,31 @@ void ValkyrieAdapter::onReadyRead() {
                 // 发送数据请求
                 QJsonObject content_obj = json_array[1].toObject();
                 QVariantMap data = content_obj.toVariantMap();
-
+                QString temp = data.value("rtype").toString();
+                QStringList list = temp.split(";");
+                for (int i = 0; i < list.size(); i++) {
+                    emit typeCountAdd(list[i].toInt());
+                }
                 emit defectDataReceived(data);
             } else if (msg_type == "IMAGE") {
                 QJsonObject content_obj = json_array[1].toObject();
                 QVariantMap data = content_obj.toVariantMap();
 
                 emit defectImageReceived(data);
+            } else if (msg_type == "REALTIMEYIELD") {
+                QJsonObject content_obj = json_array[1].toObject();
+                QVariantMap data = content_obj.toVariantMap();
+                double res = data["res"].toDouble();
+
+                emit realtimeYieldDataReceived(res);
+            } else if (msg_type == "FALSERATE") {
+                QVector<QVariantMap> datas;
+                for (int i = 1; i < json_array.size(); i++) {
+                    QJsonObject content_obj = json_array[i].toObject();
+                    QVariantMap data = content_obj.toVariantMap();
+                    datas.append(data);
+                }
+                emit falseRateReceived(datas);
             }
         }
     }

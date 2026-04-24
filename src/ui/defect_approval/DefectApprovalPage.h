@@ -27,16 +27,25 @@ public:
 
     ~DefectApprovalPage() override;
 
+
 private:
     Ui::DefectApprovalPage *ui;
 
     void setupUi();
 
+    void initDashboard();
+
+    QFrame *createReportCard(QString title, QString value, QString color);
+
     QListWidget* thumbnailList_;
     QLabel* mainImageDisplay_;
 
     QString current_rects_str_;    // 暂存当前选中的缺陷坐标
+    QString current_count_; // 当前展示图片的缺陷数量
+    QString current_type_; // 当前展示图片的缺陷类型集合
     QPixmap current_raw_pixmap_;   // 暂存当前纯净的原图 (未缩放)
+    QListWidgetItem* current_index_; // 当前被展示的图片索引
+    bool current_image_flag_ = false; // 当前图片是否为缺陷图
 };
 
 
