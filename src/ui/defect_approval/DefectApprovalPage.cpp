@@ -82,8 +82,8 @@ void DefectApprovalPage::setupUi() {
 
     QHBoxLayout *controlLayout = new QHBoxLayout();
     controlLayout->addStretch();
-    QPushButton *togglePassBtn_ = new QPushButton("正藏产品", this);
-    QPushButton *toggleStopBtn_ = new QPushButton("异常产品", this);
+    QPushButton *togglePassBtn_ = new QPushButton("误报放行", this);
+    QPushButton *toggleStopBtn_ = new QPushButton("确认次品", this);
     QPushButton *toggleDefectBtn_ = new QPushButton("标记缺陷", this);
     togglePassBtn_->setCursor(Qt::PointingHandCursor);
     togglePassBtn_->setStyleSheet(
@@ -136,8 +136,15 @@ void DefectApprovalPage::setupUi() {
 
     // 绑定通过检测
     connect(togglePassBtn_, &QPushButton::clicked, this, [this]() {
-        QListWidgetItem *item = thumbnailList_->currentItem();
+        // 次品标记
+        QString original_path = current_index_->data(Qt::UserRole).toString();
+        QVariantMap req;
+        req["method"] = "DetectRecord.modifyRecordStatus";
+        req["flag"] = "1";
+        req["filePath"] = original_path;
+        ValkyrieAdapter::getIntance().sendPayload("METHOD", req);
 
+        QListWidgetItem *item = thumbnailList_->currentItem();
         if (item) {
             int row = thumbnailList_->row(item);
             QListWidgetItem *takenItem = thumbnailList_->takeItem(row);
@@ -149,8 +156,15 @@ void DefectApprovalPage::setupUi() {
     });
     // 绑定取消通过
     connect(toggleStopBtn_, &QPushButton::clicked, this, [this]() {
-        QListWidgetItem *item = thumbnailList_->currentItem();
+        // 误报标记
+        QString original_path = current_index_->data(Qt::UserRole).toString();
+        QVariantMap req;
+        req["method"] = "DetectRecord.modifyRecordStatus";
+        req["flag"] = "2";
+        req["filePath"] = original_path;
+        ValkyrieAdapter::getIntance().sendPayload("METHOD", req);
 
+        QListWidgetItem *item = thumbnailList_->currentItem();
         if (item) {
             int row = thumbnailList_->row(item);
             QListWidgetItem *takenItem = thumbnailList_->takeItem(row);

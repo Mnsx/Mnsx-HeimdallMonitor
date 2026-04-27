@@ -8,9 +8,16 @@
 #include <QtCharts/QVBarModelMapper>
 #include <QtCharts/QBarCategoryAxis>
 #include <QtCharts/QValueAxis>
+#include <QToolTip> // 🌟 引入提示框
+#include <QCursor>  // 🌟 引入光标
 
 PartsPerMillion::PartsPerMillion(QWidget *parent) : QWidget(parent), ui(new Ui::PartsPerMillion) {
     ui->setupUi(this);
+
+    // 🌟 继承透明底板战术，彻底抹杀系统默认的灰白底色
+    this->setAttribute(Qt::WA_StyledBackground, true);
+    this->setStyleSheet("background-color: transparent;");
+
     initChart();
 }
 
@@ -19,7 +26,6 @@ PartsPerMillion::~PartsPerMillion() {
 }
 
 void PartsPerMillion::initChart() {
-    // 构建标准model
     QStandardItemModel* dataModel = new QStandardItemModel(3, 2, this);
     dataModel->setHorizontalHeaderLabels({"视觉节点", "PPM数值"});
     dataModel->setData(dataModel->index(0, 0), "Achilles-01");
@@ -29,48 +35,87 @@ void PartsPerMillion::initChart() {
     dataModel->setData(dataModel->index(2, 0), "Olympus-B");
     dataModel->setData(dataModel->index(2, 1), 210);
 
-    // 构建图表
     QBarSeries* series = new QBarSeries();
     QChart* chart = new QChart();
     chart->addSeries(series);
     chart->setTitle("各节点PPM数据比对");
     chart->setAnimationOptions(QChart::SeriesAnimations);
-    // 图标风格
+
     chart->setBackgroundVisible(false);
-    chart->setTitleBrush(QBrush(Qt::white));
+    chart->setBackgroundRoundness(0);
+
+    QFont titleFont("Consolas", 14, QFont::Bold);
+    chart->setTitleFont(titleFont);
+    chart->setTitleBrush(QBrush(QColor("#E0E0E0")));
     chart->legend()->hide();
 
-    // 绑定数值
     QVBarModelMapper* mapper = new QVBarModelMapper(this);
     mapper->setModel(dataModel);
     mapper->setSeries(series);
     mapper->setFirstBarSetColumn(1);
     mapper->setLastBarSetColumn(1);
 
-    // 构建X轴
+    if (!series->barSets().isEmpty()) {
+        QBarSet* barSet = series->barSets().first();
+        barSet->setBrush(QColor("#00FFCC"));
+        barSet->setPen(QPen(Qt::NoPen));
+    }
+
+    QFont axisFont("Consolas", 10, QFont::Bold);
+    QPen gridPen(QColor("#333333"), 1, Qt::DashLine);
+    QPen axisLinePen(QColor("#555555"), 2);
+    QColor labelColor("#AAAAAA");
+
     QStringList categories;
     for (int i = 0; i < dataModel->rowCount(); ++i) {
         categories << dataModel->index(i, 0).data().toString();
     }
+
     QBarCategoryAxis* axisX = new QBarCategoryAxis();
     axisX->append(categories);
-    axisX->setLabelsColor(Qt::white);
+    axisX->setLabelsFont(axisFont);
+    axisX->setLabelsColor(labelColor);
+    axisX->setGridLinePen(gridPen);
+    axisX->setLinePen(axisLinePen);
     chart->addAxis(axisX, Qt::AlignBottom);
     series->attachAxis(axisX);
 
-    // 构建Y轴
     QValueAxis* axisY = new QValueAxis();
     axisY->setTitleText("PPM");
-    axisY->setLabelsColor(Qt::white);
-    axisY->setTitleBrush(QBrush(Qt::white));
+    axisY->setLabelsFont(axisFont);
+    axisY->setLabelsColor(labelColor);
+    axisY->setTitleFont(axisFont);
+    axisY->setTitleBrush(QBrush(labelColor));
+    axisY->setGridLinePen(gridPen);
+    axisY->setLinePen(axisLinePen);
     axisY->setRange(0, 300);
     chart->addAxis(axisY, Qt::AlignLeft);
     series->attachAxis(axisY);
 
-    // 布局装载
     QChartView* chartView = new QChartView(chart);
     chartView->setRenderHint(QPainter::Antialiasing);
-    chartView->setStyleSheet("background: transparent; border: none;");
+
+    // 🎨 统一暗黑涂装，合并原有背景透明样式
+    chartView->setStyleSheet(
+        "QToolTip { color: #00FFCC; background-color: #1A1A1A; border: 1px solid #555555; font-family: Consolas; font-size: 13px; padding: 4px; }"
+        "background: transparent; border: none;"
+    );
+
+    // ==========================================
+    // 🌟 新增战术：柱状体雷达悬停侦测
+    // ==========================================
+    connect(series, &QBarSeries::hovered, this, [dataModel, chartView](bool status, int index, QBarSet *barset) {
+        if (status) {
+            // 通过 index 回查 Model 里的第 0 列获取名字，通过 barset 获取具体数值
+            QString nodeName = dataModel->index(index, 0).data().toString();
+            double ppmValue = barset->at(index);
+
+            QString text = QString("节点: %1\nPPM: %2").arg(nodeName).arg(ppmValue);
+            QToolTip::showText(QCursor::pos(), text, chartView);
+        } else {
+            QToolTip::hideText();
+        }
+    });
 
     QLayout* currentLayout = this->layout();
     if (currentLayout == nullptr) {

@@ -1,8 +1,7 @@
-/** 
- * @file DefectDistribution.cpp
+/** * @file DefectDistribution.cpp
  * @author Mnsx_x <xx1527030652@gmail.com>
  * @date 2026/4/24
- * @description 
+ * @description
  */
 //
 // Created by Mnsx on 2026/4/24.
@@ -14,17 +13,20 @@
 #include "ui_DefectDistribution.h"
 
 #include <QPieModelMapper>
-#include "DefectDistribution.h"
 #include <QVBoxLayout>
 #include <QStandardItemModel>
 #include <QtCharts/QChartView>
 #include <QtCharts/QPieSeries>
 #include <QtCharts/QVPieModelMapper>
+#include <QToolTip>
+#include <QCursor>
 
 #include "../../../../core/adapter/ValkyrieAdapter.h"
 
 DefectDistribution::DefectDistribution(QWidget *parent) : QWidget(parent), ui(new Ui::DefectDistribution) {
     ui->setupUi(this);
+    this->setAttribute(Qt::WA_StyledBackground, true);
+    this->setStyleSheet("background-color: transparent;");
     initChart();
 }
 
@@ -33,11 +35,9 @@ DefectDistribution::~DefectDistribution() {
 }
 
 void DefectDistribution::initChart() {
-    // 构建model
-    // 创建标准模型
     QStandardItemModel* dataModel = new QStandardItemModel(4, 2, this);
     dataModel->setHorizontalHeaderLabels({"缺陷类型", "发生频次"});
-    // 填充初始模拟数据
+
     dataModel->setData(dataModel->index(0, 0), "斑点污块");
     dataModel->setData(dataModel->index(0, 1), count1_);
     dataModel->setData(dataModel->index(1, 0), "边缘断裂");
@@ -46,41 +46,80 @@ void DefectDistribution::initChart() {
     dataModel->setData(dataModel->index(2, 1), count3_);
     dataModel->setData(dataModel->index(3, 0), "尺寸超差");
     dataModel->setData(dataModel->index(3, 1), count4_);
-    // 绘制图表
+
     QPieSeries* series = new QPieSeries();
     series->setHoleSize(0.35);
     series->setPieSize(0.8);
 
     QChart* chart = new QChart();
     chart->addSeries(series);
-    chart->setTitle("缺陷类型分布");
+    chart->setTitle("缺陷类型分布监测");
+    chart->setAnimationOptions(QChart::SeriesAnimations);
 
-    // 图标风格
     chart->setBackgroundVisible(false);
-    chart->setTitleBrush(QBrush(Qt::white));
-    chart->legend()->setLabelColor(Qt::white);
-    chart->legend()->setAlignment(Qt::AlignRight);
+    chart->setPlotAreaBackgroundVisible(false);
+    chart->setBackgroundBrush(Qt::transparent);
+    chart->setPlotAreaBackgroundBrush(Qt::transparent);
+    chart->setBackgroundRoundness(0);
 
-    // 搭建Mapper
+    QFont titleFont("Consolas", 14, QFont::Bold);
+    chart->setTitleFont(titleFont);
+    chart->setTitleBrush(QBrush(QColor("#E0E0E0")));
+
+    QFont legendFont("Consolas", 10, QFont::Bold);
+    chart->legend()->setFont(legendFont);
+    chart->legend()->setLabelColor(QColor("#AAAAAA"));
+    chart->legend()->setAlignment(Qt::AlignRight);
+    chart->legend()->setMarkerShape(QLegend::MarkerShapeRectangle);
+
     QVPieModelMapper* mapper = new QVPieModelMapper(this);
-    mapper->setModel(dataModel);    // 绑定数据源
-    mapper->setSeries(series);      // 绑定显示器
-    mapper->setLabelsColumn(0);     // 设置标签第零行
-    mapper->setValuesColumn(1);     // 设置第一行
+    mapper->setModel(dataModel);
+    mapper->setSeries(series);
+    mapper->setLabelsColumn(0);
+    mapper->setValuesColumn(1);
+
+    QList<QColor> colors = {
+        QColor("#00FFCC"),
+        QColor("#FF007F"),
+        QColor("#007ACC"),
+        QColor("#FFD700")
+    };
+
+    QList<QPieSlice*> slices = series->slices();
+    for (int i = 0; i < slices.size() && i < colors.size(); ++i) {
+        slices.at(i)->setBrush(colors.at(i));
+        slices.at(i)->setPen(QPen(Qt::NoPen));
+        slices.at(i)->setLabelFont(QFont("Consolas", 9));
+        slices.at(i)->setLabelColor(QColor("#E0E0E0"));
+    }
 
     QChartView* chartView = new QChartView(chart);
     chartView->setRenderHint(QPainter::Antialiasing);
-    chartView->setStyleSheet("background: transparent; border: none;");
+    chartView->setStyleSheet(
+        "QToolTip { color: #00FFCC; background-color: #1A1A1A; border: 1px solid #555555; font-family: Consolas; font-size: 13px; padding: 4px; }"
+        "background: transparent; border: none;"
+    );
 
-    // 创建layout
+    connect(series, &QPieSeries::hovered, this, [chartView](QPieSlice *slice, bool state) {
+        if (state) {
+            slice->setExploded(true);
+            slice->setExplodeDistanceFactor(0.08);
+
+            QString text = QString("%1\n频次: %2").arg(slice->label()).arg(slice->value());
+            QToolTip::showText(QCursor::pos(), text, chartView);
+        } else {
+            slice->setExploded(false);
+            QToolTip::hideText();
+        }
+    });
+
     QLayout* currentLayout = this->layout();
     if (currentLayout == nullptr) {
         QVBoxLayout* newLayout = new QVBoxLayout(this);
-        newLayout->setContentsMargins(0, 0, 0, 0); // 取消边距，让图表彻底撑满
+        newLayout->setContentsMargins(0, 0, 0, 0);
         currentLayout = newLayout;
     }
     currentLayout->addWidget(chartView);
-    this->layout()->addWidget(chartView);
 
     this->defectModel_ = dataModel;
 
