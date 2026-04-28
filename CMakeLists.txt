@@ -27,6 +27,7 @@ add_executable(HeimdallMonitor main.cpp
         src/ui/data_report/item/defect_distribution/DefectDistribution.cpp
         src/ui/data_report/item/false_positive_rate/FalsePositiveRate.cpp
         src/ui/data_report/DataReport.cpp
+        src/ui/data_report/utils/ChartsToPdf.h
 )
 
 target_link_libraries(HeimdallMonitor

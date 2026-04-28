@@ -1,6 +1,7 @@
 #include "FalsePositiveRate.h"
 #include "ui_FalsePositiveRate.h"
 
+#include "../../utils/ChartsToPdf.h"
 #include <QVBoxLayout>
 #include <QtCharts/QChartView>
 #include <QtCharts/QLineSeries>
@@ -9,8 +10,12 @@
 #include <QtCharts/QValueAxis>
 #include <QToolTip> // 🌟 引入提示框
 #include <QCursor>  // 🌟 引入光标获取位置
+#include <QtGui/QPainter>
+#include <QtGui/QPdfWriter>
+#include <QtCharts>
 
 #include "../../../../core/adapter/ValkyrieAdapter.h"
+
 
 FalsePositiveRate::FalsePositiveRate(QWidget *parent) : QWidget(parent), ui(new Ui::FalsePositiveRate) {
     ui->setupUi(this);
@@ -177,7 +182,44 @@ void FalsePositiveRate::initChart() {
         newLayout->setContentsMargins(0, 0, 0, 0);
         currentLayout = newLayout;
     }
+
+    // 1. 创建导出按钮并应用统一的深色科技感涂装
+    QPushButton* exportPdfBtn = new QPushButton("导出 PDF 报告", this);
+    exportPdfBtn->setStyleSheet(
+        "QPushButton {"
+        "   color: #00FFCC; "
+        "   background-color: #1A1A1A; "
+        "   border: 1px solid #555555; "
+        "   border-radius: 4px; "
+        "   padding: 6px 12px; "
+        "   font-family: Consolas; "
+        "   font-weight: bold;"
+        "}"
+        "QPushButton:hover { background-color: #333333; border: 1px solid #00FFCC; }"
+        "QPushButton:pressed { background-color: #000000; }"
+    );
+
+    // 2. 将图表和按钮安全地加入垂直布局（规避基类 3 参数报错）
     currentLayout->addWidget(chartView);
+    currentLayout->addWidget(exportPdfBtn);
+    currentLayout->setAlignment(exportPdfBtn, Qt::AlignRight);
+
+    // 3. 连接按钮信号，执行 PDF 生成与保存逻辑
+    connect(exportPdfBtn, &QPushButton::clicked, this, [chartView]() {
+        QString dirPath = QDir::currentPath() + "/data_report";
+        QDir dir(dirPath);
+
+        // 关键防护：探测并自动生成缺失的存储目录
+        if (!dir.exists()) {
+            dir.mkpath(".");
+        }
+
+        // 独立命名为 false_positive_rate.pdf
+        QString filePath = dirPath + "/false_positive_rate.pdf";
+
+        // 调用公共组件执行矢量渲染
+        exportChartToPdf(chartView, filePath);
+    });
 
     this->fprModel_ = dataModel;
 }

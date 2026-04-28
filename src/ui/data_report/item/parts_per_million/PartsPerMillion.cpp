@@ -2,6 +2,7 @@
 #include "ui_PartsPerMillion.h"
 
 #include <QVBoxLayout>
+#include "../../utils/ChartsToPdf.h"
 #include <QtCharts/QChartView>
 #include <QtCharts/QBarSeries>
 #include <QtCharts/QBarSet>
@@ -10,6 +11,9 @@
 #include <QtCharts/QValueAxis>
 #include <QToolTip> // 🌟 引入提示框
 #include <QCursor>  // 🌟 引入光标
+#include <QtGui/QPainter>
+#include <QtGui/QPdfWriter>
+#include <QtCharts>
 
 PartsPerMillion::PartsPerMillion(QWidget *parent) : QWidget(parent), ui(new Ui::PartsPerMillion) {
     ui->setupUi(this);
@@ -123,7 +127,44 @@ void PartsPerMillion::initChart() {
         newLayout->setContentsMargins(0, 0, 0, 0);
         currentLayout = newLayout;
     }
+
+    // 1. 创建导出按钮并复用深色科技感样式
+    QPushButton* exportPdfBtn = new QPushButton("导出 PDF 报告", this);
+    exportPdfBtn->setStyleSheet(
+        "QPushButton {"
+        "   color: #00FFCC; "
+        "   background-color: #1A1A1A; "
+        "   border: 1px solid #555555; "
+        "   border-radius: 4px; "
+        "   padding: 6px 12px; "
+        "   font-family: Consolas; "
+        "   font-weight: bold;"
+        "}"
+        "QPushButton:hover { background-color: #333333; border: 1px solid #00FFCC; }"
+        "QPushButton:pressed { background-color: #000000; }"
+    );
+
+    // 2. 将图表和按钮加入垂直布局（安全写法，避免 3 参数报错）
     currentLayout->addWidget(chartView);
+    currentLayout->addWidget(exportPdfBtn);
+    currentLayout->setAlignment(exportPdfBtn, Qt::AlignRight);
+
+    // 3. 连接按钮信号到导出 PDF 逻辑
+    connect(exportPdfBtn, &QPushButton::clicked, this, [chartView]() {
+        QString dirPath = QDir::currentPath() + "/data_report";
+        QDir dir(dirPath);
+
+        // 关键防护：如果文件夹不存在，必须先创建
+        if (!dir.exists()) {
+            dir.mkpath(".");
+        }
+
+        // 命名为 parts_per_million.pdf 防止覆盖之前的文件
+        QString filePath = dirPath + "/parts_per_million.pdf";
+
+        // 调用你在 ChartsToPdf.h 中封装好的公共函数
+        exportChartToPdf(chartView, filePath);
+    });
 
     this->ppmModel_ = dataModel;
 }

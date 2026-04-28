@@ -12,6 +12,7 @@
 #include "DefectDistribution.h"
 #include "ui_DefectDistribution.h"
 
+#include "../../utils/ChartsToPdf.h"
 #include <QPieModelMapper>
 #include <QVBoxLayout>
 #include <QStandardItemModel>
@@ -20,6 +21,9 @@
 #include <QtCharts/QVPieModelMapper>
 #include <QToolTip>
 #include <QCursor>
+#include <QtGui/QPainter>
+#include <QtGui/QPdfWriter>
+#include <QtCharts>
 
 #include "../../../../core/adapter/ValkyrieAdapter.h"
 
@@ -113,16 +117,54 @@ void DefectDistribution::initChart() {
         }
     });
 
-    QLayout* currentLayout = this->layout();
+   QLayout* currentLayout = this->layout();
     if (currentLayout == nullptr) {
         QVBoxLayout* newLayout = new QVBoxLayout(this);
         newLayout->setContentsMargins(0, 0, 0, 0);
         currentLayout = newLayout;
     }
+
+    // 1. 创建导出按钮（延续赛博朋克深色战术风格）
+    QPushButton* exportPdfBtn = new QPushButton("导出 PDF 报告", this);
+    exportPdfBtn->setStyleSheet(
+        "QPushButton {"
+        "   color: #00FFCC; "
+        "   background-color: #1A1A1A; "
+        "   border: 1px solid #555555; "
+        "   border-radius: 4px; "
+        "   padding: 6px 12px; "
+        "   font-family: Consolas; "
+        "   font-weight: bold;"
+        "}"
+        "QPushButton:hover { background-color: #333333; border: 1px solid #00FFCC; }"
+        "QPushButton:pressed { background-color: #000000; }"
+    );
+
+    // 2. 加入布局（安全二段式写法）
     currentLayout->addWidget(chartView);
+    currentLayout->addWidget(exportPdfBtn);
+    currentLayout->setAlignment(exportPdfBtn, Qt::AlignRight);
+
+    // 3. 挂载 PDF 导出信号
+    connect(exportPdfBtn, &QPushButton::clicked, this, [chartView]() {
+        QString dirPath = QDir::currentPath() + "/data_report";
+        QDir dir(dirPath);
+
+        // 防护：动态生成目录
+        if (!dir.exists()) {
+            dir.mkpath(".");
+        }
+
+        // 独立命名为 defect_distribution.pdf 避免冲突
+        QString filePath = dirPath + "/defect_distribution.pdf";
+
+        // 调用统一渲染总线
+        exportChartToPdf(chartView, filePath);
+    });
 
     this->defectModel_ = dataModel;
 
+    // 保持你原有的数据更新信号连接
     connect(&ValkyrieAdapter::getIntance(), &ValkyrieAdapter::typeCountAdd, this, &DefectDistribution::addCount);
 }
 

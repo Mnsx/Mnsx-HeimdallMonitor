@@ -1,5 +1,6 @@
 #include "RealtimeYield.h"
 #include "ui_RealtimeYield.h"
+#include "../../utils/ChartsToPdf.h"
 
 #include <QVBoxLayout>
 #include <QRandomGenerator>
@@ -7,6 +8,10 @@
 #include <QtCharts/QSplineSeries>
 #include <QtCharts/QVXYModelMapper>
 #include <QToolTip>
+#include <QtGui/QPainter>
+#include <QtGui/QPdfWriter>
+#include <QtCharts>
+#include <QMessageBox>
 
 #include "../../../../core/adapter/ValkyrieAdapter.h"
 
@@ -113,14 +118,56 @@ void RealtimeYield::initChart() {
         }
     });
 
+    // ---------------- UI 布局配置 ----------------
     QLayout* currentLayout = this->layout();
     if (currentLayout == nullptr) {
         QVBoxLayout* newLayout = new QVBoxLayout(this);
         newLayout->setContentsMargins(0, 0, 0, 0);
         currentLayout = newLayout;
     }
+
+    // 1. 创建导出按钮并设置深色科技感样式
+    QPushButton* exportPdfBtn = new QPushButton("导出 PDF 报告", this);
+    exportPdfBtn->setStyleSheet(
+        "QPushButton {"
+        "   color: #00FFCC; "
+        "   background-color: #1A1A1A; "
+        "   border: 1px solid #555555; "
+        "   border-radius: 4px; "
+        "   padding: 6px 12px; "
+        "   font-family: Consolas; "
+        "   font-weight: bold;"
+        "}"
+        "QPushButton:hover { background-color: #333333; border: 1px solid #00FFCC; }"
+        "QPushButton:pressed { background-color: #000000; }"
+    );
+
+    // 2. 将图表和按钮加入垂直布局
     currentLayout->addWidget(chartView);
+    currentLayout->addWidget(exportPdfBtn);                      // 先把按钮加进去
+    currentLayout->setAlignment(exportPdfBtn, Qt::AlignRight);   // 单独设置这个按钮靠右对齐
+
     this->yieldModel_ = dataModel;
+
+    // 3. 连接按钮点击信号到导出逻辑
+    connect(exportPdfBtn, &QPushButton::clicked, this, [chartView]() {
+        // 获取当前运行目录并拼接 data_report 文件夹路径
+        QString dirPath = QDir::currentPath() + "/data_report";
+        QDir dir(dirPath);
+
+        // 关键防护：如果文件夹不存在，必须先创建，否则 QPdfWriter 会直接写入失败
+        if (!dir.exists()) {
+            dir.mkpath(".");
+        }
+
+        QString filePath = dirPath + "/realtime_yield.pdf";
+
+        // 调用你已经在顶部定义好的导出函数
+        exportChartToPdf(chartView, filePath);
+
+        // （可选）导出成功后可以在控制台打印或弹窗提示
+        qDebug() << "PDF已成功导出至:" << filePath;
+    });
 
     updateTimer_ = new QTimer(this);
     connect(&ValkyrieAdapter::getIntance(), &ValkyrieAdapter::realtimeYieldDataReceived, this, [this](double res) {

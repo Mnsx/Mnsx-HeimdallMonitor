@@ -14,6 +14,11 @@
 #include "defect_approval/DefectApprovalPage.h"
 #include "system_log/SystemLogPage.h"
 #include "data_report/item/defect_distribution/DefectDistribution.h"
+#include <QtGui/QPainter>
+#include <QtGui/QPdfWriter>
+#include <QtCharts>
+
+
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     this->setWindowTitle("Heimdall Monitor - Valkyrie Control Center");
